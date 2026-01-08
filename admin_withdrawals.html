@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Withdrawals</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #f0f2f5; padding: 20px; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header h2 { color: #333; }
+        .back-btn { padding: 10px 20px; background: #34495e; color: white; text-decoration: none; border-radius: 5px; font-weight: 600; }
+        
+        .container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); overflow-x: auto; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: #555; text-transform: uppercase; font-size: 13px; }
+        tr:hover { background: #f9f9f9; }
+
+        .status-pending { color: #e67e22; font-weight: bold; background: #fef5e7; padding: 5px 10px; border-radius: 15px; font-size: 12px; }
+        
+        .btn-action { padding: 8px 12px; border: none; border-radius: 5px; color: white; cursor: pointer; font-size: 13px; margin-right: 5px; transition: 0.3s; }
+        .btn-pay { background: #27ae60; }
+        .btn-pay:hover { background: #219150; }
+        .btn-reject { background: #c0392b; }
+        .btn-reject:hover { background: #a93226; }
+
+        .no-data { text-align: center; padding: 20px; color: #777; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2><span style="color:#e67e22">Pending</span> Withdrawals</h2>
+    <a href="admin_home.html" class="back-btn">Back to Dashboard</a>
+</div>
+
+<div class="container">
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>User Name</th>
+                <th>Phone</th>
+                <th>Task28 ID</th>
+                <th>Amount</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="withdraw-table">
+            <tr><td colspan="6" class="no-data">Loading requests...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAa_T9MDAjSjQ4Us8C4O6Lqzus2d1_LRck",
+    authDomain: "task-310c5.firebaseapp.com",
+    projectId: "task-310c5",
+    storageBucket: "task-310c5.firebasestorage.app",
+    messagingSenderId: "503757001786",
+    appId: "1:503757001786:web:3ba0943c3367c273de9103"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Security Check
+  if(localStorage.getItem("adminAuth") !== "true") window.location.href = "admin_login.html";
+
+  // ডেটা লোড করা
+  const withdrawRef = ref(db, 'withdrawals');
+
+  onValue(withdrawRef, (snapshot) => {
+      const table = document.getElementById('withdraw-table');
+      table.innerHTML = "";
+      
+      let hasData = false;
+
+      snapshot.forEach((childSnapshot) => {
+          const item = childSnapshot.val();
+          const key = childSnapshot.key; // ইউনিক আইডি
+
+          // শুধু পেনন্ডিং রিকোয়েস্ট শো করবে
+          if (item.status === 'pending') {
+              hasData = true;
+              const date = new Date(item.date).toLocaleString();
+
+              const row = `
+                <tr>
+                    <td style="font-size:12px; color:#777;">${date}</td>
+                    <td style="font-weight:600;">${item.name}</td>
+                    <td>${item.user}</td>
+                    <td style="color:#2980b9; font-weight:bold;">${item.task_id}</td>
+                    <td style="color:green; font-weight:bold; font-size:16px;">$${item.amount}</td>
+                    <td>
+                        <button class="btn-action btn-pay" onclick="updateStatus('${key}', 'paid')">✔ Pay</button>
+                        <button class="btn-action btn-reject" onclick="updateStatus('${key}', 'rejected')">✖ Reject</button>
+                    </td>
+                </tr>
+              `;
+              // নতুন রিকোয়েস্ট উপরে দেখানোর জন্য prepend ব্যবহার করছি (table এর ক্ষেত্রে একটু ট্রিকি, তাই সাধারণ append)
+              // ভালো দেখানোর জন্য উল্টো লুপ চালানো যেত, তবে এটা সহজ:
+              table.innerHTML = row + table.innerHTML; 
+          }
+      });
+
+      if (!hasData) {
+          table.innerHTML = `<tr><td colspan="6" class="no-data">No pending withdrawal requests found!</td></tr>`;
+      }
+  });
+
+  // স্ট্যাটাস আপডেট ফাংশন (Pay / Reject)
+  window.updateStatus = function(id, status) {
+      if(confirm(`Are you sure you want to mark this as ${status}?`)) {
+          update(ref(db, `withdrawals/${id}`), {
+              status: status
+          }).then(() => {
+              // অটোমেটিক লিস্ট থেকে সরে যাবে কারণ আমরা শুধু 'pending' শো করছি
+              alert(`Request marked as ${status}!`);
+          }).catch(err => {
+              alert("Error: " + err);
+          });
+      }
+  }
+</script>
+
+</body>
+</html>
