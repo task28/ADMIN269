@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #f0f2f5; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .back-btn { padding: 10px 20px; background: #34495e; color: white; text-decoration: none; border-radius: 5px; }
+        
+        .table-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; color: #333; }
+        tr:hover { background: #f1f1f1; }
+        
+        .search-box { padding: 10px; width: 300px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2>User List</h2>
+    <a href="admin_home.html" class="back-btn">Back to Dashboard</a>
+</div>
+
+<div class="table-container">
+    <input type="text" id="search" class="search-box" placeholder="Search by Phone Number..." onkeyup="searchUser()">
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Balance ($)</th>
+                <th>Total Tasks</th>
+                <th>Joined Date</th>
+            </tr>
+        </thead>
+        <tbody id="user-table">
+            <tr><td colspan="5">Loading data...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAa_T9MDAjSjQ4Us8C4O6Lqzus2d1_LRck",
+    authDomain: "task-310c5.firebaseapp.com",
+    projectId: "task-310c5",
+    storageBucket: "task-310c5.firebasestorage.app",
+    messagingSenderId: "503757001786",
+    appId: "1:503757001786:web:3ba0943c3367c273de9103"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  if(localStorage.getItem("adminAuth") !== "true") window.location.href = "admin_login.html";
+
+  // ইউজার ডেটা আনা
+  onValue(ref(db, 'users'), (snapshot) => {
+      const table = document.getElementById('user-table');
+      table.innerHTML = "";
+      
+      if (!snapshot.exists()) {
+          table.innerHTML = "<tr><td colspan='5'>No users found.</td></tr>";
+          return;
+      }
+
+      snapshot.forEach((childSnapshot) => {
+          const user = childSnapshot.val();
+          const date = new Date(user.joined_at).toLocaleDateString();
+          
+          const row = `
+            <tr>
+                <td>${user.name}</td>
+                <td class="phone-col">${user.phone}</td>
+                <td style="color:green; font-weight:bold;">$${parseFloat(user.balance).toFixed(2)}</td>
+                <td>${user.total_tasks}</td>
+                <td>${date}</td>
+            </tr>
+          `;
+          table.innerHTML += row;
+      });
+  });
+
+  // সার্চ ফাংশন
+  window.searchUser = function() {
+      const input = document.getElementById('search').value.toLowerCase();
+      const rows = document.querySelectorAll('#user-table tr');
+      
+      rows.forEach(row => {
+          const phone = row.querySelector('.phone-col')?.innerText.toLowerCase();
+          if (phone && phone.includes(input)) {
+              row.style.display = "";
+          } else {
+              row.style.display = "none";
+          }
+      });
+  }
+</script>
+
+</body>
+</html>
