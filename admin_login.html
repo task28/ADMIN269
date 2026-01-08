@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #1a1a2e; height: 100vh; display: flex; justify-content: center; align-items: center; margin: 0; }
+        .login-card { background: #16213e; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 320px; text-align: center; color: white; border: 1px solid #0f3460; }
+        h2 { margin-bottom: 20px; color: #e94560; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #0f3460; border: none; color: white; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #e94560; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        button:hover { background: #c12c45; }
+        .error { color: #ff4d4d; font-size: 13px; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <h2>Admin Access</h2>
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="adminLogin()">Login Panel</button>
+    <p id="error-msg" class="error"></p>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+  import { getDatabase, ref, get, child, set } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAa_T9MDAjSjQ4Us8C4O6Lqzus2d1_LRck",
+    authDomain: "task-310c5.firebaseapp.com",
+    projectId: "task-310c5",
+    storageBucket: "task-310c5.firebasestorage.app",
+    messagingSenderId: "503757001786",
+    appId: "1:503757001786:web:3ba0943c3367c273de9103"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // ডিফল্ট অ্যাডমিন সেটআপ (যদি না থাকে)
+  get(child(ref(db), 'admins/main')).then((snap) => {
+      if (!snap.exists()) {
+          set(ref(db, 'admins/main'), { user: 'admin', pass: '123456' });
+          console.log("Default Admin Created: admin / 123456");
+      }
+  });
+
+  window.adminLogin = function() {
+      const u = document.getElementById('username').value;
+      const p = document.getElementById('password').value;
+      const msg = document.getElementById('error-msg');
+
+      get(child(ref(db), 'admins/main')).then((snapshot) => {
+          if (snapshot.exists()) {
+              const creds = snapshot.val();
+              if (u === creds.user && p === creds.pass) {
+                  localStorage.setItem("adminAuth", "true");
+                  window.location.href = "admin_home.html";
+              } else {
+                  msg.style.display = 'block';
+                  msg.innerText = "Invalid Username or Password!";
+              }
+          }
+      });
+  }
+</script>
+
+</body>
+</html>
